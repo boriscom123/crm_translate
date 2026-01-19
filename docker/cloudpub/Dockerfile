@@ -1,0 +1,1 @@
+FROM cloudpub/cloudpub:latest

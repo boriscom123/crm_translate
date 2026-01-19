@@ -1,38 +1,77 @@
-version: '3.2'
-
 services:
-
-  frontend:
-    build: frontend
-    ports:
-      - 20080:80
+  php:
+    build: ./docker/php
+    container_name: ${APP_NAME}-php
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
-      # Re-use local composer cache via host-volume
-      - ~/.composer-docker/cache:/root/.composer/cache:delegated
-      # Mount source-code for development
-      - ./:/app
+      - ./app:/var/app
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+    restart: unless-stopped
+    networks:
+      - project
 
-  backend:
-    build: backend
+  nginx:
+    build: ./docker/nginx
+    container_name: ${APP_NAME}-nginx
     ports:
-      - 21080:80
+      - "80:80"
     volumes:
-      # Re-use local composer cache via host-volume
-      - ~/.composer-docker/cache:/root/.composer/cache:delegated
-      # Mount source-code for development
-      - ./:/app
+      - ./app:/var/app
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template
+      - ./docker/nginx/projects:/etc/nginx/conf.d/projects
+      - ./docker/nginx/log:/var/log/nginx
+    depends_on:
+      - php
+    restart: on-failure
+    networks:
+      - project
 
   mysql:
-    image: mysql:5.7
+    build: ./docker/mysql
+    container_name: ${APP_NAME}-mysql
+    #    command: --default-authentication-plugin=caching_sha2_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/dumps:/dumps
     environment:
-      - MYSQL_ROOT_PASSWORD=verysecret
-      - MYSQL_DATABASE=yii2advanced
-      - MYSQL_USER=yii2advanced
-      - MYSQL_PASSWORD=secret
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    restart: always
+    networks:
+      - project
 
-  #pgsql:
-  #  image: postgres:9.5
-  #  environment:
-  #    - POSTGRES_DB=yii2advanced
-  #    - POSTGRES_USER=yii2advanced
-  #    - POSTGRES_PASSWORD=secret
+  phpmyadmin:
+    build: ./docker/phpmyadmin
+    container_name: ${APP_NAME}-phpmyadmin
+    ports:
+      - "8080:80"
+    restart: always
+    environment:
+      - PMA_ARBITRARY=1
+    networks:
+      - project
+
+  cloudpub:
+      build: ./docker/cloudpub
+      container_name: ${APP_NAME}-cloudpub
+      restart: unless-stopped
+      environment:
+        TOKEN: ${CLOUDPUB_API_TOKEN}
+        HTTP: nginx:80
+      command: run
+      depends_on:
+        - nginx
+      volumes:
+        - ./docker/cloudpub:/home/cloudpub
+      networks:
+        - project
+
+networks:
+  project:
+    driver: bridge
