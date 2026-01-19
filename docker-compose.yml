@@ -1,77 +1,75 @@
-services:
-  php:
-    build: ./docker/php
-    container_name: ${APP_NAME}-php
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    volumes:
-      - ./app:/var/app
-      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/php.ini
-    restart: unless-stopped
-    networks:
-      - project
-
-  nginx:
-    build: ./docker/nginx
-    container_name: ${APP_NAME}-nginx
+services:  
+  php:  
+    build: ./docker/php  
+    container_name: ${APP_NAME}-php  
+    extra_hosts:  
+      - host.docker.internal:host-gateway  
+    volumes:  
+      - ./app:/var/app  
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/php.ini  
+    restart: unless-stopped  
+    networks:  
+      - project  
+  
+  nginx:  
+    build: ./docker/nginx  
+    container_name: ${APP_NAME}-nginx  
+    ports:  
+      - "80:80"  
+    volumes:  
+      - ./app:/var/app  
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf  
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template  
+      - ./docker/nginx/projects:/etc/nginx/conf.d/projects  
+      - ./docker/nginx/log:/var/log/nginx  
+    depends_on:  
+      - php  
+    restart: on-failure  
+    networks:  
+      - project  
+  
+  mysql:  
+    build: ./docker/mysql  
+    container_name: ${APP_NAME}-mysql  
+    #    command: --default-authentication-plugin=caching_sha2_password  
+    ports:  
+      - "3306:3306"  
+    volumes:  
+      - ./docker/mysql/data:/var/lib/mysql  
+      - ./docker/mysql/dumps:/dumps  
+    environment:  
+      MYSQL_DATABASE: ${MYSQL_DATABASE}  
+      MYSQL_USER: ${MYSQL_USER}  
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}  
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}  
+    restart: always  
+    networks:  
+      - project  
+  
+  phpmyadmin:  
+    build: ./docker/phpmyadmin  
+    container_name: ${APP_NAME}-phpmyadmin  
+    ports:  
+      - "8080:80"  
+    restart: always  
+    environment:  
+      - PMA_ARBITRARY=1  
+    networks:  
+      - project  
+  
+  translator:
+    build: ./translator-service
+    container_name: ${APP_NAME}-translator 
     ports:
-      - "80:80"
-    volumes:
-      - ./app:/var/app
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template
-      - ./docker/nginx/projects:/etc/nginx/conf.d/projects
-      - ./docker/nginx/log:/var/log/nginx
+      - "5000:80"
     depends_on:
-      - php
-    restart: on-failure
-    networks:
-      - project
-
-  mysql:
-    build: ./docker/mysql
-    container_name: ${APP_NAME}-mysql
-    #    command: --default-authentication-plugin=caching_sha2_password
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./docker/mysql/data:/var/lib/mysql
-      - ./docker/mysql/dumps:/dumps
+      - mysql
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    restart: always
-    networks:
-      - project
-
-  phpmyadmin:
-    build: ./docker/phpmyadmin
-    container_name: ${APP_NAME}-phpmyadmin
-    ports:
-      - "8080:80"
-    restart: always
-    environment:
-      - PMA_ARBITRARY=1
-    networks:
-      - project
-
-  cloudpub:
-      build: ./docker/cloudpub
-      container_name: ${APP_NAME}-cloudpub
-      restart: unless-stopped
-      environment:
-        TOKEN: ${CLOUDPUB_API_TOKEN}
-        HTTP: nginx:80
-      command: run
-      depends_on:
-        - nginx
-      volumes:
-        - ./docker/cloudpub:/home/cloudpub
-      networks:
-        - project
-
-networks:
-  project:
-    driver: bridge
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=${MYSQL_DATABASE};Uid=${MYSQL_USER};Pwd=${MYSQL_PASSWORD};
+    networks:  
+      - project 
+  
+networks:  
+  project:  
+    driver: bridge 
