@@ -43,8 +43,8 @@ public class TranslatorController : ControllerBase
         try
         {
             // Если дата не передана — используем текущую дату в UTC
-            string effectiveDateStr = string.IsNullOrWhiteSpace(date) 
-                ? DateTime.UtcNow.ToString("yyyy-MM-dd") 
+            string effectiveDateStr = string.IsNullOrWhiteSpace(date)
+                ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow")).ToString("yyyy-MM-dd")
                 : date;
 
             if (!DateTime.TryParseExact(effectiveDateStr, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var targetDate))

@@ -9,6 +9,7 @@ $params = array_merge(
 
 return [
     'id' => 'app-backend',
+    'name' => '@Bynextpr',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
     'bootstrap' => ['log'],
@@ -38,14 +39,31 @@ return [
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
-        /*
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                [
+                    'pattern' => 'api/translators',
+                    'route' => 'translator/index',
+                    'verb' => ['GET']
+                ],
+                [
+                    'pattern' => 'api/translators/<id:\\d+>',
+                    'route' => 'translator/view',
+                    'verb' => ['GET']
+                ],
             ],
         ],
-        */
+        'response' => [
+            'class' => 'yii\web\Response',
+            'on beforeSend' => function ($event) {
+                $response = $event->sender;
+                $response->headers->set('Access-Control-Allow-Origin', '*');
+                $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+                $response->headers->set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+            },
+        ],
     ],
     'params' => $params,
 ];
