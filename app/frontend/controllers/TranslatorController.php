@@ -12,6 +12,12 @@ class TranslatorController extends Controller
         // Fetch translators from the database
         $translators = Translator::find()->all();
 
+        // Set breadcrumbs explicitly to control the labels
+        $this->view->params['breadcrumbs'] = [
+            ['label' => 'Главная', 'url' => ['/site/index']],
+            ['label' => 'Переводчики']
+        ];
+
         return $this->render('index', [
             'translators' => $translators
         ]);

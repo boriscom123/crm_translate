@@ -35,7 +35,8 @@ AppAsset::register($this);
         ],
     ]);
     $menuItems = [
-        ['label' => 'Translators', 'url' => ['/translator/index']],
+        ['label' => 'Главная', 'url' => ['/site/index']],
+        ['label' => 'Переводчики', 'url' => ['/translator/index']],
     ];
     echo Nav::widget([
         'options' => ['class' => 'navbar-nav me-auto mb-2 mb-md-0'],
@@ -57,8 +58,25 @@ AppAsset::register($this);
 
 <main role="main" class="flex-shrink-0">
     <div class="container">
+        <?php
+        // Only show breadcrumbs if we're not on the home page
+        if (Yii::$app->requestedRoute !== 'site/index') {
+            // Replace 'Home' with 'Главная' in breadcrumbs if present
+            $breadcrumbs = isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [];
+            foreach ($breadcrumbs as &$crumb) {
+                if (isset($crumb['url']) && $crumb['url'] === Yii::$app->homeUrl &&
+                    isset($crumb['label']) && $crumb['label'] === 'Home') {
+                    $crumb['label'] = 'Главная';
+                }
+            }
+        } else {
+            // On home page, don't show any breadcrumbs
+            $breadcrumbs = [];
+        }
+        ?>
         <?= Breadcrumbs::widget([
-            'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
+            'links' => $breadcrumbs ?? [],
+            'homeLink' => null, // ← убрать "Home"
         ]) ?>
         <?= Alert::widget() ?>
         <?= $content ?>

@@ -5,8 +5,7 @@
 
 use yii\helpers\Html;
 
-$this->title = 'Translators';
-$this->params['breadcrumbs'][] = $this->title;
+$this->title = 'Переводчики';
 
 // Convert the translator objects to JSON for use in Vue.js
 $translatorsJson = json_encode(array_map(function($translator) {
@@ -23,11 +22,52 @@ $translatorsJson = json_encode(array_map(function($translator) {
 <div class="translator-index">
     <h1><?= Html::encode($this->title) ?></h1>
 
-    <!-- Vue.js Application -->
-    <div id="translator-app">
+    <!-- Server-Side Rendered Content for SEO -->
+    <div id="translator-ssr-content">
         <div class="row mb-3">
             <div class="col-md-4">
-                <label for="date-picker" class="form-label">Select Date:</label>
+                <label class="form-label">Выберите дату:</label>
+                <input type="date" class="form-control" value="<?= date('Y-m-d') ?>">
+            </div>
+        </div>
+
+        <h2>Доступные переводчики на <span id="current-date-display"><?= date('j F Y года') ?></span></h2>
+
+        <div class="row">
+            <?php
+            $currentDate = date('Y-m-d');
+            $availableTranslators = array_filter($translators, function($translator) use ($currentDate) {
+                return $translator->isAvailableOnDate($currentDate);
+            });
+
+            if (!empty($availableTranslators)):
+                foreach ($availableTranslators as $translator): ?>
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title"><?= Html::encode($translator->name) ?></h5>
+                                <p class="card-text">Email: <?= Html::encode($translator->email) ?></p>
+                                <p class="card-text">Доступность по будням: <?= $translator->weekday_availability ? 'Доступен' : 'Недоступен' ?></p>
+                                <p class="card-text">Доступность по выходным: <?= $translator->weekend_availability ? 'Доступен' : 'Недоступен' ?></p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="col-12">
+                    <div class="alert alert-info mt-3">
+                        Нет доступных переводчиков на выбранную дату.
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Vue.js Application that will replace SSR content -->
+    <div id="translator-app" v-cloak style="display: none;">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="date-picker" class="form-label">Выберите дату:</label>
                 <input type="date"
                        id="date-picker"
                        class="form-control"
@@ -36,14 +76,14 @@ $translatorsJson = json_encode(array_map(function($translator) {
             </div>
         </div>
 
-        <h2>Available Translators on {{ formattedSelectedDate }}</h2>
+        <h2>Доступные переводчики на {{ formattedSelectedDate }}</h2>
 
         <div v-if="loading" class="loading">
-            Loading translators...
+            Загрузка переводчиков...
         </div>
 
         <div v-if="error" class="alert alert-danger">
-            Error: {{ error }}
+            Ошибка: {{ error }}
         </div>
 
         <div v-if="!loading && !error" class="row">
@@ -52,15 +92,15 @@ $translatorsJson = json_encode(array_map(function($translator) {
                     <div class="card-body">
                         <h5 class="card-title">{{ translator.name }}</h5>
                         <p class="card-text">Email: {{ translator.email }}</p>
-                        <p class="card-text">Weekday Availability: {{ translator.weekday_availability ? 'Available' : 'Not Available' }}</p>
-                        <p class="card-text">Weekend Availability: {{ translator.weekend_availability ? 'Available' : 'Not Available' }}</p>
+                        <p class="card-text">Доступность по будням: {{ translator.weekday_availability ? 'Доступен' : 'Недоступен' }}</p>
+                        <p class="card-text">Доступность по выходным: {{ translator.weekend_availability ? 'Доступен' : 'Недоступен' }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <div v-if="filteredTranslators.length === 0 && !loading && !error" class="alert alert-info mt-3">
-            No translators are available on the selected date.
+            Нет доступных переводчиков на выбранную дату.
         </div>
     </div>
 
@@ -81,9 +121,9 @@ $translatorsJson = json_encode(array_map(function($translator) {
 
                 // Computed property to format the selected date
                 const formattedSelectedDate = computed(() => {
-                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                    const options = { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' };
                     const date = new Date(selectedDate.value);
-                    return date.toLocaleDateString(undefined, options);
+                    return date.toLocaleDateString('ru-RU', options) + ' года';
                 });
 
                 // Function to check if a translator is available on a specific date
@@ -117,7 +157,17 @@ $translatorsJson = json_encode(array_map(function($translator) {
 
                 // Initialize the app
                 onMounted(() => {
-                    // Everything is initialized with the data passed from PHP
+                    // Show the Vue app and hide the SSR content
+                    const ssrContent = document.getElementById('translator-ssr-content');
+                    const vueApp = document.getElementById('translator-app');
+
+                    if (ssrContent) {
+                        ssrContent.style.display = 'none';
+                    }
+
+                    if (vueApp) {
+                        vueApp.style.display = 'block';
+                    }
                 });
 
                 return {
@@ -167,6 +217,16 @@ $translatorsJson = json_encode(array_map(function($translator) {
             text-align: center;
             padding: 20px;
             font-size: 18px;
+        }
+
+        /* Hide Vue.js content until Vue is loaded */
+        [v-cloak] {
+            display: none;
+        }
+
+        /* Style for initial content */
+        .translator-initial-content {
+            /* Initially shown, hidden when Vue takes over */
         }
     </style>
 

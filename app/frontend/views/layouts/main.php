@@ -35,7 +35,8 @@ AppAsset::register($this);
         ],
     ]);
     $menuItems = [
-        ['label' => 'Translators', 'url' => ['/translator/index']],
+        ['label' => 'Главная', 'url' => ['/site/index']],
+        ['label' => 'Переводчики', 'url' => ['/translator/index']],
     ];
 
     echo Nav::widget([
@@ -59,7 +60,8 @@ AppAsset::register($this);
 <main role="main" class="flex-shrink-0">
     <div class="container">
         <?= Breadcrumbs::widget([
-            'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
+            'links' => $this->params['breadcrumbs'] ?? [],
+            'homeLink' => false, // ← убрать "Home"
         ]) ?>
         <?= Alert::widget() ?>
         <?= $content ?>
